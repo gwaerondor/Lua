@@ -249,7 +249,9 @@ function check_matches(name)
    local get_spells = windower.ffxi.get_spells()
    for i, value in ipairs(trusts) do
       if value.english:lower():match(name:lower()) then
-         if not get_spells[value.id] and not value.english:endswith("(UC)") then
+         if value.english:endswith("(UC)") then
+            -- ignore unity concord trusts
+         elseif not get_spells[value.id] and not value.english:endswith("(UC)") then
             notLearned:insert(value.english)
          else
             learned:insert(value.english)
