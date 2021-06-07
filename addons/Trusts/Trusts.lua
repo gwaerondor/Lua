@@ -30,6 +30,7 @@ _addon.author='from20020516'
 _addon.version='1.1'
 _addon.commands={'trusts','tru'}
 
+require('strings')
 config = require('config')
 math = require('math')
 math.randomseed(os.clock())
@@ -67,7 +68,7 @@ windower.register_event('login',function()
 end)
 
 windower.register_event('addon command',function(...)
-    cmd = {...}
+    cmd = T{...}
     if cmd[1] == 'help' then
         local chat = windower.add_to_chat
         local color = string.color
@@ -77,10 +78,17 @@ windower.register_event('addon command',function(...)
         chat(207,'//tru '..color('list',166,160)..' --Lists your saved sets.')
         chat(207,'//tru '..color('random',166,160)..' --What\'s your fortune today?')
         chat(207,'//tru '..color('check',166,160)..' --List of unlearned trusts. gotta catch \'em all!')
+        chat(207,'//tru '..color('check <matchstring>',166,160)..' --Lists trusts containing <matchstring> and if they have been learned')
     elseif cmd[1] == 'save' then
         save_set(cmd[2])
     elseif cmd[1] == 'check' then
-        check_learned()
+       table.remove(cmd, 1)
+       local name = cmd:concat(" ")
+       if name == "" then
+          check_learned()
+       else
+          check_matches(name)
+       end
     elseif cmd[1] == 'list' then
         list_sets()
     else
@@ -235,16 +243,40 @@ windower.register_event('action', function(act)
     end
 end)
 
+function check_matches(name)
+   local learned = T{}
+   local notLearned = T{}
+   local get_spells = windower.ffxi.get_spells()
+   for i, value in ipairs(trusts) do
+      if value.english:lower():match(name:lower()) then
+         if not get_spells[value.id] and not value.english:endswith("(UC)") then
+            notLearned:insert(value.english)
+         else
+            learned:insert(value.english)
+         end
+      end
+   end
+   for _, f in ipairs(learned) do
+      log("You are " .. "trusted":color(258) .. " by " .. f:color(111))
+   end
+   for _, nf in ipairs(notLearned) do
+      log("You are " .. "missing ":color(123) .. nf:color(111))
+   end
+   if #learned == 0 and #notLearned == 0 then
+      log(("There is no trust matching " .. name):color(123))
+   end
+end
+
 function check_learned()
-    local learned = {}
-    local get_spells = windower.ffxi.get_spells()
-    for i,value in ipairs(trusts) do
-        if get_spells[value.id] == false and not value.english:endswith('(UC)') then
-            table.insert(learned,value.id)
-            log(check_lang(value))
-        end
-    end
-    log('You haven\'t trusted yet from '..#learned..' trusts.')
+   local missing = {}
+   local get_spells = windower.ffxi.get_spells()
+   for _, value in ipairs(trusts) do
+      if not get_spells[value.id] and not value.english:endswith('(UC)') then
+         log(check_lang(value))
+         table.insert(missing, value)
+      end
+   end
+   log("You are missing " .. #missing .. " alter egos.")
 end
 
 trusts = T{
